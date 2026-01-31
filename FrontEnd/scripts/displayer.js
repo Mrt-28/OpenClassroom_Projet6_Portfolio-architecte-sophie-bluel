@@ -203,7 +203,9 @@ const generateGalleryManager = {
         imageInputBlock: null, 
         imageInputIcon: null,
         imageInputText: null,
-        imageInputDesc: null,      
+        imageInputDesc: null,
+        submitButton: null,
+        chargedFile: null    
     },
 
     generateNavBar: function(modifyModeContent) {
@@ -260,8 +262,13 @@ const generateGalleryManager = {
             modifyModeOverlay.addEventListener("click", (event) => {
                 if (event.target.classList.contains("galery-manager-overlay")) {
                     displayOverlayAndFormIO(false); // Hide the overlay and form
+                    if (!returnButton.classList.contains("hidden")) {
+                        this.galleryManagement.classList.remove("hidden"); // Show the gallery management block
+                        this.addWorkBlock.classList.add("hidden"); // Hide the add work form block
+                        returnButton.classList.add("hidden"); // Hide the return button
+                    }
+                    this.resetWorkAdderForm();
                 }
-
             });
 
 
@@ -317,7 +324,7 @@ const generateGalleryManager = {
                     const data = await deleteRessource(workId, localStorage.getItem("userId"), localStorage.getItem("token"));
                     deleteButton.parentElement.remove();
                     document.querySelector(".gallery-data-"+workId).remove();
-
+                    displayOverlayAndFormIO(false);
                 } catch (error) {
                     console.error("Error deleting work:", error);
                     alert("Erreur lors de la suppression de la photo : " + error.message);
@@ -338,6 +345,7 @@ const generateGalleryManager = {
             galleryManagement.classList.add("hidden"); // Hide the gallery management block
             this.addWorkBlock.classList.remove("hidden"); // Show the add work form block
             this.returnButton.classList.remove("hidden"); // Show the return button
+            this.checkFormValidity(); // Check form validity when showing the add work form
         });
 
         galleryManagement.appendChild(addWorkButton);
@@ -382,7 +390,6 @@ const generateGalleryManager = {
             width: "0"
         });
           
-        let chargedFile = null ;
 
         imageInputFile.addEventListener("change", (event) => {
             const file = event.target.files[0];
@@ -397,10 +404,12 @@ const generateGalleryManager = {
                 if (fileSizeMB > maxSizeMB) {
                     alert(`L'image dépasse la taille maximale de ${maxSizeMB} Mo.`);
                     imageInput.value = ""; // Réinitialise le champ
+                    this.addWorkForm.chargedFile = null;
+                    this.checkFormValidity();
                     return;
                 } else {
                     console.log("Image acceptée :", file.name, fileSizeMB.toFixed(2), "Mo");
-                    chargedFile = event.target.files[0];
+                    this.addWorkForm.chargedFile = event.target.files[0];
                 }
 
                 const previewImage = document.createElement("img");
@@ -424,8 +433,10 @@ const generateGalleryManager = {
                 imageInputIcon.classList.remove("hidden");
                 imageInputText.classList.remove("hidden");
                 imageInputDesc.classList.remove("hidden");
+                this.addWorkForm.chargedFile = null;
                 console.log("no image selected yet");
             }
+            this.checkFormValidity();
         });
 
         const imageInputIcon = document.createElement("img");
@@ -464,6 +475,9 @@ const generateGalleryManager = {
             type: "text",
             required: true
         });
+        titleInput.addEventListener("input", () => {
+            this.checkFormValidity();
+        });
         addWorkForm.appendChild(titleInput);
 
         // Category of the work to add 
@@ -495,6 +509,11 @@ const generateGalleryManager = {
                 categorySelect.appendChild(option);
             }
         });
+        
+        categorySelect.addEventListener("change", () => {
+            this.checkFormValidity();
+        });
+
         addWorkForm.appendChild(categorySelect);
 
         const addWorkFormSeparator = document.createElement("hr");
@@ -519,7 +538,7 @@ const generateGalleryManager = {
                 // Send data to the server
                 const formData = new FormData();
                 formData.append("title", titleInput.value);
-                formData.append("image", chargedFile);
+                formData.append("image", this.addWorkForm.chargedFile);
                 formData.append("category", categorySelect.value);
                 const data = await postRessource(formData, localStorage.getItem("userId"), localStorage.getItem("token"));
 
@@ -530,6 +549,7 @@ const generateGalleryManager = {
                 worksData = await getRessource("http://localhost:5678/api/works");
                 console.log(worksData);
                 redrawGallery();
+                displayOverlayAndFormIO(false);
             }
             else{
                 alert("Formulaire non valide");
@@ -543,18 +563,32 @@ const generateGalleryManager = {
         this.addWorkForm.imageInputBlock = imageInputBlock;
         this.addWorkForm.imageInputIcon = imageInputIcon;
         this.addWorkForm.imageInputText = imageInputText;
-        this.addWorkForm.imageInputDesc = imageInputDesc;    
+        this.addWorkForm.imageInputDesc = imageInputDesc;   
+        this.addWorkForm.submitButton = submitButton;
+        this.addWorkForm.chargedFile = null; 
 
         addWorkForm.appendChild(submitButton);
 
         addWorkBlock.classList.add("hidden"); // Hide the form at first       
         modifyModeContent.appendChild(addWorkBlock);
     },
+
+    // Methode pour gerer l'etat du boutton valider
+    checkFormValidity: function() {
+        const hasImage = this.addWorkForm.chargedFile !== null;
+        const hasTitle = this.addWorkForm.titleInput.value.trim().length > 0;
+        const hasCategory = this.addWorkForm.categorySelect.value !== "" && this.addWorkForm.categorySelect.value !== null;
+        if (this.addWorkForm.submitButton) {
+            this.addWorkForm.submitButton.disabled = !(hasImage && hasTitle && hasCategory);
+        }
+    },
+
     resetWorkAdderForm: function(){
         this.addWorkForm.imageInputFile.value = "";
         this.addWorkForm.titleInput.value = "";
         this.addWorkForm.categorySelect.value = "";
         this.addWorkForm.defaultOption.selected = true;
+        this.addWorkForm.chargedFile = null;
         if (this.addWorkForm.imageInputBlock.lastChild.tagName === "IMG") {
             this.addWorkForm.imageInputBlock.removeChild(this.addWorkForm.imageInputBlock.lastChild); // Remove the preview image
         }
@@ -562,6 +596,8 @@ const generateGalleryManager = {
         this.addWorkForm.imageInputIcon.classList.remove("hidden");
         this.addWorkForm.imageInputText.classList.remove("hidden");
         this.addWorkForm.imageInputDesc.classList.remove("hidden");
+
+        this.checkFormValidity();
     }
 }
 
@@ -660,3 +696,4 @@ function redrawGallery() {
     const modifyModeContent = document.querySelector(".gallery-manager-window");
     generateGalleryManager.generateWorkDeleter(modifyModeContent, worksData, true);
 }
+

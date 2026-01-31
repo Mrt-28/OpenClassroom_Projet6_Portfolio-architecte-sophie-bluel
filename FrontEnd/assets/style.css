@@ -359,8 +359,10 @@ footer nav ul {
 	width: fit-content;
 }
 
-.gallery-manager-window__delete-work {
-
+.gallery-manager-window__content__green-button:disabled {
+	background-color: #A7A7A7;
+	border-color: #A7A7A7;
+	cursor: not-allowed;
 }
 
 .gallery-manager-window__delete-work__grid {
