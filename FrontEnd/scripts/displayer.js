@@ -134,7 +134,9 @@ function displayModifyButton(conected = false) {
         modifyButton.classList.add("title-and-modify__modify");
 
         const titleElement = document.querySelector(".title-and-modify__title");
-        modifyButton.style.left = getDistancePourcentFromRight(titleElement) + "%";
+        const spaceInPixels = 20; // Espace de 20px entre le titre et le bouton
+        const spaceInPercent = (spaceInPixels / window.innerWidth) * 100;
+        modifyButton.style.left = (parseFloat(getDistancePourcentFromRight(titleElement)) + spaceInPercent) + "%";
 
         titleAndModify.appendChild(modifyButton);
 
